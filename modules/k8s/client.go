@@ -9,22 +9,13 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"github.com/gruntwork-io/terratest/modules/logger"
+
 	"github.com/gruntwork-io/terratest/modules/testing"
+	"github.com/stretchr/testify/require"
 )
 
-// GetKubernetesClientE returns a Kubernetes API client that can be used to make requests.
-func GetKubernetesClientE(t testing.TestingT) (*kubernetes.Clientset, error) {
-	kubeConfigPath, err := GetKubeConfigPathE(t)
-	if err != nil {
-		return nil, err
-	}
-
-	options := NewKubectlOptions("", kubeConfigPath, "default")
-	return GetKubernetesClientFromOptionsE(t, options)
-}
-
-// GetKubernetesClientFromOptionsE returns a Kubernetes API client given a configured KubectlOptions object.
-func GetKubernetesClientFromOptionsE(t testing.TestingT, options *KubectlOptions) (*kubernetes.Clientset, error) {
+// GetKubernetesRestConfigE returns a Kubernetes Rest client config used to make requests or create a client.
+func GetKubernetesRestConfigClientE(t testing.TestingT, options *KubectlOptions) (*rest.Config, error) {
 	var err error
 	var config *rest.Config
 
@@ -50,6 +41,34 @@ func GetKubernetesClientFromOptionsE(t testing.TestingT, options *KubectlOptions
 			}
 			logger.Log(t, "Configuring Kubernetes client to use the in-cluster serviceaccount token")
 		}
+	}
+
+	return config, err
+}
+
+func GetKubernetesRestConfigClient(t testing.TestingT, options *KubectlOptions) *rest.Config {
+	config, err := GetKubernetesRestConfigClientE(t, options)
+	require.NoError(t, err)
+	return config
+}
+
+// GetKubernetesClientE returns a Kubernetes API client that can be used to make requests.
+func GetKubernetesClientE(t testing.TestingT) (*kubernetes.Clientset, error) {
+	kubeConfigPath, err := GetKubeConfigPathE(t)
+	if err != nil {
+		return nil, err
+	}
+
+	options := NewKubectlOptions("", kubeConfigPath, "default")
+	return GetKubernetesClientFromOptionsE(t, options)
+}
+
+// GetKubernetesClientFromOptionsE returns a Kubernetes API client given a configured KubectlOptions object.
+func GetKubernetesClientFromOptionsE(t testing.TestingT, options *KubectlOptions) (*kubernetes.Clientset, error) {
+
+	config, err := GetKubernetesRestConfigClientE(t, options)
+	if err != nil {
+		return nil, err
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
